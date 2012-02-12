@@ -1,0 +1,159 @@
+scihtmlatex is based on the htmlatex project, http://directory.fsf.org/wiki/HTMLatex
+The following readme is from that project.
+
+0. Acknowledgments
+htmlatex is based on mt-math, a Moveable Type plugin,  by A.M. Kuchling
+(http://www.amk.ca/python/code/mt-math) which is in turn based on eqhtml.py
+by Kjell Magne Fauske (http://fauskes.net/nb/htmleqII/eqhtml.py).
+
+Some bits of code were plundered from Alex Gitten's perl port of latexrender
+(http://www.tangentspace.net/cz/archives/2005/04/latexrender-perl-port)
+(http://www.mayer.dial.pipex.com/tex.htm) as well as from the fine people at 
+http://www.debianhelp.co.uk/apachead.htm.
+
+Thanks to Graham Dumpleton <grahamd@dscpl.com.au> for telling me how to
+fix two bugs within about 15 minutes of htmlatex's release into the world.
+
+1. Requirements
+It's quite possible that htmlatex will work with other setups, but this is what
+it was developed and tested on:
+	python 2.4.3		http://www.python.org
+	python 2.3.5		
+	Apache 2.0.55		http://httpd.apache.org
+	mod_python 3.2.8	http://www.modpython.org
+	mod_python 3.1.2
+	Debian unstable		http://www.debian.org
+	latex			http://www.latex-project.org
+	dvipng			http://sourceforge.net/projects/dvipng
+	BeautifulSoup		http://www.crummy.com/software/BeautifulSoup
+
+I'm unsure if this will run on Windows or not; I paid no attention to cross-
+platform issues -- I suppose if you've got cygwin it might work.  Other than
+that it would need some tweaking with location of binaries and the like at
+the very minimum.
+
+2. Design considerations
+I wanted relatively seamless rendering of latex on web pages.  I didn't want
+to have to preprocess the html files; I wanted to be able to just type the
+latex source in the html file and be done with it.
+
+I didn't want the html files to be altered on-disk -- if I wanted to make
+a change to an equation, or if I went back six months later, I wanted to be
+able to look at the plain latex source just the way I typed it.
+
+I didn't want to generate zillions of little image files to store on the file
+system; however, due to the fact that Internet Explorer can't handle inline
+data:URLs, htmlatex no longer stores the rendered images in memcached -- 
+instead, it uses the filesystem.
+
+I didn't want to be tied in to using something like Wordpress or MT -- I 
+wanted a generic solution that could run on apache+mod_python without any
+extras.
+
+I didn't want to re-render an equation if it had already been rendered -- the
+performance hit in compiling a tex file to a dvi and then running dvipng is (as
+you might imagine) enormous.
+
+3.  How it works
+htmlatex works as a mod_python output filter.  Outgoing traffic is grabbed by 
+mod_python and handed off to htmlatex if it meets the right criteria (more on
+this later).  htmlatex parses the data looking for <div> and <span> tags that it 
+understands.  (More on that later as well).
+
+For each equation an MD5 sum is made for the equation.  The filesystem given
+by IMGDIR (currently only modifiable by editing the source code), is queried 
+for a file named MD5sum.png.  If the rendered image doesn't exist as a file,
+the equation is written to a tex file in a temporary directory 
+(/tmp/htmlatex at the moment) which is compiled it into a DVI. (I should
+mention here that the raw latex source is sanitized for commands that
+aren't appropriate to being blindly run from the web).
+
+The DVI file is processed by dvipng.  Each equation in the HTML file 
+equals one tex file equals one DVI file equals one PNG file.  
+In other words, one <div> or <span> in your HTML source equals one image 
+on the rendered page. It is important to note that all of the processing is only
+done if memcache does not have the data to be sent to the client.
+
+The divs and spans are then replaced with an <img> tag referring to the name
+of the png file.  The HTML/latex source is turned into an HTML comment containing 
+the original latex code.
+
+The new on-the-fly HTML is sent back to the webserver and sent out to the client.
+
+NOTE: At the moment, a two level directory structure is used to store rendered images.
+This is, in theory, to reduce the seek time in cases where there are large number of
+images.
+
+4. Options
+htmlatex has a few options that can be changed in the source code.  My eventual 
+plan is to change them to PythonOptions in the httpd.conf file.  
+
+If the DEBUG flag is set, all intermediate files are retained in the temporary
+directory (/tmp/htmlatex).  This is the only tool available for easy
+troubleshooting.  Oddly, having the DEBUG flag set should result in slightly
+better performance as the overhead involved in deleting the files is absent.
+
+The only option being passed to dvipng that deserves explanation is the 
+compression option.  It's set at "-z 9" for maximum compression.  This used to
+be a tradeoff between render-time and memcached storage space; since the 
+filesystem is now used to store the rendered equations, I'm not sure which
+way is best -- to reduce one-time rendering at the cost of using more storage 
+space or to use less storage space (and thus reduce bandwidth used) while
+increasing render time.  
+
+IMGDIR is the location on your filesystem that rendered images are stored.  The
+default value is /var/www/data/images/htmlatex.  This must be a directory
+under your webserver's DocumentRoot, as the url in <img src=...> is constructed
+from this.
+
+5. httpd.conf
+Here's a snippet that should give you a start:
+	<Location /your/directory>
+		PythonPath ['/var/www/python/htmlatex']+sys.path
+		PythonDebug Off
+		PythonOutputFilter htmlatex HTMLATEX
+		AddOutputFilter HTMLATEX .html
+	</Location>
+
+With this setting, htmlatex filters all outgoing html. If you want to 
+conserve CPU cycles and only process the files that need it, you
+can change the AddOutputFilter line to HTMLATEX .htmlx 
+
+NOTE:  You will need to add a mime-type of text/html for htmlx either in 
+your httpd.conf file or /etc/mime.types to get this working, but it will
+work.
+
+6. CSS, <div>, <span>
+htmlatex understands a few different types of latex \begin statements.
+   LATEX		   HTML
+   -----		   ----
+\begin{equation*} 	<div class="eq">
+\begin{equation}	<div class="numeq">
+\begin{align*}		<div class="numalignedeq">
+\begin{align}		<div class="alignedeq">
+...\begin{matrix}	<div class="matrix">		htmlatex takes care of the \begin{equation*}
+							as well as the brackets; all you have to do 
+							is enter the element and line separators
+...\begin{matrix}	<div class="det">		Changes the brackets above into | for determinants
+
+$ inline equation $	<span class="eq">
+			<span class="matrix">		keeps matrices inline; allows for construction of 
+			<span class="det">		equations such as A = [blah]
+
+So, for an inline equaion, the following would work:
+	<span class="eq"> y = \sqrt{\frac{e^{-4x}}{\sqrt{1-x^2}}} </span>
+
+To make the final page rendered by the client look a little nicer, it helps to 
+use some CSS tweaks.
+
+	div.eq {text-align:center;}
+	div.numeq {text-align:right;}
+	div.alignedeq {text-align:center;}
+	div.numalignedeq {text-align:right;}
+	span.eq {vertical-align:-20%;}
+	div.matrix {text-align:center;}
+	div.det {text-align:center;}
+
+7. Contact
+Bugs, feature requests, comments, etc., can be sent to jay@meangrape.com
+http://www.meangrape.com/htmlatex

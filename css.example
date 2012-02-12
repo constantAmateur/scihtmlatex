@@ -1,0 +1,10 @@
+span.eq {vertical-align:-20%;}
+span.matrix {vertical-align:-50%;}
+span.det {vertical-align:-50%;}
+
+div.eq {text-align:center;}
+div.numeq {text-align:right;}
+div.alignedeq {text-align:center;}
+div.numalignedeq {text-align:right;}
+div.matrix {text-align:center;}
+div.det {text-align:center;}

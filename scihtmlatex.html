@@ -1,0 +1,147 @@
+
+<!doctype html PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<html><head><title>Python: module htmlatex</title>
+</head><body bgcolor="#f0f0f8">
+
+<table width="100%" cellspacing=0 cellpadding=2 border=0 summary="heading">
+<tr bgcolor="#7799ee">
+<td valign=bottom>&nbsp;<br>
+<font color="#ffffff" face="helvetica, arial">&nbsp;<br><big><big><strong>htmlatex</strong></big></big> (version BETA-1.3)</font></td
+><td align=right valign=bottom
+><font color="#ffffff" face="helvetica, arial"><a href=".">index</a><br><a href="file:/var/work/jayed/htmlatex/htmlatex.py">/var/work/jayed/htmlatex/htmlatex.py</a></font></td></tr></table>
+    <p><tt>htmlatex.py<br>
+&nbsp;<br>
+htmlatex&nbsp;does&nbsp;on-the-fly&nbsp;rendering&nbsp;of&nbsp;latex&nbsp;source&nbsp;in&nbsp;HTML&nbsp;documents.&nbsp;&nbsp;It&nbsp;is&nbsp;based&nbsp;on&nbsp;mt-math<br>
+by&nbsp;A.M.&nbsp;Kuchling&nbsp;(<a href="http://www.amk.ca/python/code/mt-math">http://www.amk.ca/python/code/mt-math</a>)&nbsp;which&nbsp;is&nbsp;based&nbsp;on&nbsp;eqhtml.py&nbsp;by&nbsp;<br>
+Kjell&nbsp;Magne&nbsp;Fauske&nbsp;(<a href="http://fauskes.net/nb/htmleqII/eqhtml.py">http://fauskes.net/nb/htmleqII/eqhtml.py</a>).<br>
+&nbsp;<br>
+htmlatex&nbsp;is&nbsp;a&nbsp;mod_python&nbsp;application&nbsp;that,&nbsp;after&nbsp;initially&nbsp;rendering&nbsp;equations,&nbsp;stores&nbsp;them<br>
+on&nbsp;the&nbsp;filesystem&nbsp;rerendering&nbsp;them&nbsp;only&nbsp;if&nbsp;they&nbsp;change.<br>
+&nbsp;<br>
+htmlatex&nbsp;has&nbsp;two&nbsp;main&nbsp;goals:&nbsp;&nbsp;first,&nbsp;I&nbsp;wanted&nbsp;to&nbsp;avoid&nbsp;preprocessing;&nbsp;I&nbsp;wanted&nbsp;to&nbsp;be&nbsp;able&nbsp;to<br>
+type&nbsp;the&nbsp;raw&nbsp;latex&nbsp;into&nbsp;an&nbsp;HTML&nbsp;document&nbsp;and&nbsp;be&nbsp;finished.&nbsp;&nbsp;Second,&nbsp;I&nbsp;wanted&nbsp;the&nbsp;HTML/Latex<br>
+file&nbsp;to&nbsp;remain&nbsp;untouched.<br>
+&nbsp;<br>
+There&nbsp;is&nbsp;one&nbsp;option:&nbsp;&nbsp;DEBUG.&nbsp;&nbsp;If&nbsp;DEBUG&nbsp;is&nbsp;set,&nbsp;the&nbsp;intermediate&nbsp;files&nbsp;are<br>
+maintained&nbsp;on&nbsp;disk&nbsp;in&nbsp;/tmp/htmlatex&nbsp;--&nbsp;this&nbsp;is&nbsp;the&nbsp;only&nbsp;method&nbsp;available&nbsp;for&nbsp;helping&nbsp;to<br>
+troubleshoot&nbsp;latex&nbsp;errors.&nbsp;&nbsp;Oddly&nbsp;enough,&nbsp;performance&nbsp;should&nbsp;theoretically&nbsp;*increase*&nbsp;if<br>
+debug&nbsp;mode&nbsp;is&nbsp;on&nbsp;as&nbsp;it&nbsp;doesn't&nbsp;require&nbsp;repeated&nbsp;filesystem&nbsp;access&nbsp;to&nbsp;delete&nbsp;files.<br>
+&nbsp;<br>
+There&nbsp;used&nbsp;to&nbsp;be&nbsp;another&nbsp;option:&nbsp;&nbsp;SANITIZE,&nbsp;which&nbsp;checked&nbsp;the&nbsp;latex&nbsp;source&nbsp;for&nbsp;dangerous&nbsp;code<br>
+and&nbsp;replaces&nbsp;it&nbsp;with&nbsp;a&nbsp;'sanitized'&nbsp;graphic.&nbsp;&nbsp;I&nbsp;decidd&nbsp;that&nbsp;giving&nbsp;people&nbsp;the&nbsp;option&nbsp;to&nbsp;<br>
+auto-render&nbsp;latex&nbsp;code&nbsp;over&nbsp;the&nbsp;web&nbsp;that&nbsp;could&nbsp;do&nbsp;arbitrary&nbsp;things&nbsp;to&nbsp;their&nbsp;PC&nbsp;was&nbsp;a&nbsp;bad&nbsp;idea.<br>
+All&nbsp;latex&nbsp;code&nbsp;is&nbsp;sanitized&nbsp;now.&nbsp;&nbsp;If&nbsp;you&nbsp;want&nbsp;to&nbsp;turn&nbsp;it&nbsp;off,&nbsp;just&nbsp;comment&nbsp;out&nbsp;all&nbsp;of&nbsp;the&nbsp;<br>
+_sanitize()&nbsp;calls&nbsp;in&nbsp;<a href="#Equation">Equation</a>._translateToTex().<br>
+&nbsp;<br>
+htmlatex&nbsp;used&nbsp;to&nbsp;use&nbsp;memcached&nbsp;and&nbsp;store&nbsp;the&nbsp;png&nbsp;data&nbsp;inline&nbsp;as&nbsp;a&nbsp;base64&nbsp;encoded&nbsp;url,&nbsp;however<br>
+Internet&nbsp;Explorer&nbsp;is&nbsp;unable&nbsp;to&nbsp;display&nbsp;inline&nbsp;urls&nbsp;of&nbsp;this&nbsp;type&nbsp;so&nbsp;I&nbsp;switched&nbsp;the&nbsp;storeage<br>
+backend&nbsp;to&nbsp;the&nbsp;filesystem.<br>
+&nbsp;<br>
+Version:&nbsp;$Id:&nbsp;htmlatex.py&nbsp;152&nbsp;2006-04-16&nbsp;16:05:42Z&nbsp;jayed&nbsp;$<br>
+Copyright&nbsp;(C)&nbsp;2006&nbsp;Jay&nbsp;Edwards<br>
+&nbsp;<br>
+This&nbsp;program&nbsp;is&nbsp;free&nbsp;software;&nbsp;you&nbsp;can&nbsp;redistribute&nbsp;it&nbsp;and/or<br>
+modify&nbsp;it&nbsp;under&nbsp;the&nbsp;terms&nbsp;of&nbsp;the&nbsp;GNU&nbsp;General&nbsp;Public&nbsp;License<br>
+as&nbsp;published&nbsp;by&nbsp;the&nbsp;Free&nbsp;Software&nbsp;Foundation;&nbsp;either&nbsp;version&nbsp;2<br>
+of&nbsp;the&nbsp;License,&nbsp;or&nbsp;(at&nbsp;your&nbsp;option)&nbsp;any&nbsp;later&nbsp;version.<br>
+&nbsp;<br>
+This&nbsp;program&nbsp;is&nbsp;distributed&nbsp;in&nbsp;the&nbsp;hope&nbsp;that&nbsp;it&nbsp;will&nbsp;be&nbsp;useful,<br>
+but&nbsp;WITHOUT&nbsp;ANY&nbsp;WARRANTY;&nbsp;without&nbsp;even&nbsp;the&nbsp;implied&nbsp;warranty&nbsp;of<br>
+MERCHANTABILITY&nbsp;or&nbsp;FITNESS&nbsp;FOR&nbsp;A&nbsp;PARTICULAR&nbsp;PURPOSE.&nbsp;&nbsp;See&nbsp;the<br>
+GNU&nbsp;General&nbsp;Public&nbsp;License&nbsp;for&nbsp;more&nbsp;details.<br>
+&nbsp;<br>
+You&nbsp;should&nbsp;have&nbsp;received&nbsp;a&nbsp;copy&nbsp;of&nbsp;the&nbsp;GNU&nbsp;General&nbsp;Public&nbsp;License<br>
+along&nbsp;with&nbsp;this&nbsp;program;&nbsp;if&nbsp;not,&nbsp;write&nbsp;to&nbsp;the&nbsp;Free&nbsp;Software<br>
+Foundation,&nbsp;Inc.,&nbsp;51&nbsp;Franklin&nbsp;Street,&nbsp;Fifth&nbsp;Floor,&nbsp;Boston,&nbsp;MA&nbsp;&nbsp;02110-1301,&nbsp;USA.</tt></p>
+<p>
+<table width="100%" cellspacing=0 cellpadding=2 border=0 summary="section">
+<tr bgcolor="#aa55cc">
+<td colspan=3 valign=bottom>&nbsp;<br>
+<font color="#fffff" face="helvetica, arial"><big><strong>Modules</strong></big></font></td></tr>
+    
+<tr><td bgcolor="#aa55cc"><tt>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</tt></td><td>&nbsp;</td>
+<td width="100%"><table width="100%" summary="list"><tr><td width="25%" valign=top><a href="binascii.html">binascii</a><br>
+</td><td width="25%" valign=top><a href="md5.html">md5</a><br>
+</td><td width="25%" valign=top><a href="os.html">os</a><br>
+</td><td width="25%" valign=top><a href="tempfile.html">tempfile</a><br>
+</td></tr></table></td></tr></table><p>
+<table width="100%" cellspacing=0 cellpadding=2 border=0 summary="section">
+<tr bgcolor="#ee77aa">
+<td colspan=3 valign=bottom>&nbsp;<br>
+<font color="#ffffff" face="helvetica, arial"><big><strong>Classes</strong></big></font></td></tr>
+    
+<tr><td bgcolor="#ee77aa"><tt>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</tt></td><td>&nbsp;</td>
+<td width="100%"><dl>
+<dt><font face="helvetica, arial"><a href="htmlatex.html#Equation">Equation</a>
+</font></dt></dl>
+ <p>
+<table width="100%" cellspacing=0 cellpadding=2 border=0 summary="section">
+<tr bgcolor="#ffc8d8">
+<td colspan=3 valign=bottom>&nbsp;<br>
+<font color="#000000" face="helvetica, arial"><a name="Equation">class <strong>Equation</strong></a></font></td></tr>
+    
+<tr><td bgcolor="#ffc8d8"><tt>&nbsp;&nbsp;&nbsp;</tt></td><td>&nbsp;</td>
+<td width="100%">Methods defined here:<br>
+<dl><dt><a name="Equation-__init__"><strong>__init__</strong></a>(self, key, equation)</dt><dd><tt>Parameters:&nbsp;&nbsp;key&nbsp;--&nbsp;&nbsp;an&nbsp;md5&nbsp;sum&nbsp;of&nbsp;the&nbsp;parsed&nbsp;equation&nbsp;node<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;equation&nbsp;--&nbsp;the&nbsp;parsed&nbsp;equation&nbsp;node<br>
+Methods:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;contents&nbsp;--&nbsp;base64&nbsp;encoded&nbsp;PNG<br>
+&nbsp;<br>
+When&nbsp;an&nbsp;<a href="#Equation">Equation</a>&nbsp;object&nbsp;is&nbsp;initialized,&nbsp;it&nbsp;checks&nbsp;the&nbsp;filesystem<br>
+indiciated&nbsp;by&nbsp;IMGDIR&nbsp;to&nbsp;see&nbsp;if&nbsp;a&nbsp;file&nbsp;with&nbsp;the&nbsp;same&nbsp;name&nbsp;as&nbsp;its<br>
+key&nbsp;is&nbsp;stored;&nbsp;if&nbsp;the&nbsp;key-named&nbsp;file&nbsp;exists,&nbsp;an&nbsp;&lt;img&nbsp;src&gt;&nbsp;tag<br>
+referring&nbsp;to&nbsp;the&nbsp;filesystem&nbsp;is&nbsp;inserted&nbsp;into&nbsp;<a href="#Equation">Equation</a>.contents.<br>
+&nbsp;<br>
+If&nbsp;it&nbsp;isn't&nbsp;found,&nbsp;the&nbsp;equation's&nbsp;latex&nbsp;source&nbsp;is&nbsp;sanitized,&nbsp;compiled<br>
+to&nbsp;a&nbsp;DVI,&nbsp;turned&nbsp;into&nbsp;a&nbsp;PNG,&nbsp;saved&nbsp;to&nbsp;IMGDIR,&nbsp;and&nbsp;stored&nbsp;in&nbsp;<br>
+<a href="#Equation">Equation</a>.contents</tt></dd></dl>
+
+</td></tr></table></td></tr></table><p>
+<table width="100%" cellspacing=0 cellpadding=2 border=0 summary="section">
+<tr bgcolor="#eeaa77">
+<td colspan=3 valign=bottom>&nbsp;<br>
+<font color="#ffffff" face="helvetica, arial"><big><strong>Functions</strong></big></font></td></tr>
+    
+<tr><td bgcolor="#eeaa77"><tt>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</tt></td><td>&nbsp;</td>
+<td width="100%"><dl><dt><a name="-StringIO"><strong>StringIO</strong></a>(...)</dt><dd><tt><a href="#-StringIO">StringIO</a>([s])&nbsp;--&nbsp;Return&nbsp;a&nbsp;StringIO-like&nbsp;stream&nbsp;for&nbsp;reading&nbsp;or&nbsp;writing</tt></dd></dl>
+ <dl><dt><a name="-main"><strong>main</strong></a>(data)</dt><dd><tt>Get&nbsp;the&nbsp;latex&nbsp;source;&nbsp;return&nbsp;a&nbsp;raw&nbsp;string&nbsp;for&nbsp;the&nbsp;webserver&nbsp;to&nbsp;send&nbsp;to&nbsp;the&nbsp;client<br>
+&nbsp;<br>
+Take&nbsp;the&nbsp;outgoing&nbsp;HTML&nbsp;and&nbsp;turn&nbsp;it&nbsp;into&nbsp;a&nbsp;python&nbsp;object.&nbsp;&nbsp;Search&nbsp;the&nbsp;object&nbsp;for&nbsp;the<br>
+&lt;div&gt;&nbsp;and&nbsp;&lt;span&gt;&nbsp;tags&nbsp;that&nbsp;indicate&nbsp;latex&nbsp;source&nbsp;--&nbsp;the&nbsp;tags&nbsp;we&nbsp;can&nbsp;handle&nbsp;are&nbsp;given<br>
+in&nbsp;the&nbsp;global&nbsp;variable&nbsp;TYPES.&nbsp;&nbsp;If&nbsp;there&nbsp;isn't&nbsp;anything&nbsp;to&nbsp;handle,&nbsp;return.&nbsp;&nbsp;If&nbsp;there&nbsp;is,&nbsp;<br>
+process&nbsp;it&nbsp;and&nbsp;return&nbsp;a&nbsp;pretty&nbsp;string&nbsp;of&nbsp;HTML&nbsp;for&nbsp;the&nbsp;webserver&nbsp;to&nbsp;send&nbsp;to&nbsp;the&nbsp;client.<br>
+&nbsp;<br>
+Notes:&nbsp;&nbsp;A&nbsp;working&nbsp;directory&nbsp;must&nbsp;be&nbsp;set&nbsp;via&nbsp;os.chdir&nbsp;so&nbsp;latex&nbsp;knows&nbsp;where&nbsp;to&nbsp;put&nbsp;its&nbsp;output</tt></dd></dl>
+ <dl><dt><a name="-outputfilter"><strong>outputfilter</strong></a>(filter)</dt><dd><tt>Hook&nbsp;into&nbsp;apache&nbsp;and&nbsp;filter&nbsp;the&nbsp;outgoing&nbsp;HTML.&nbsp;I've&nbsp;had&nbsp;some&nbsp;on&nbsp;and&nbsp;off<br>
+again&nbsp;problems&nbsp;with&nbsp;the&nbsp;Content-Length&nbsp;headers.&nbsp;&nbsp;As&nbsp;of&nbsp;2006/04/10&nbsp;I&nbsp;think<br>
+it's&nbsp;been&nbsp;resolved.<br>
+&nbsp;<br>
+This&nbsp;technique&nbsp;was&nbsp;shamelessly&nbsp;cribbed&nbsp;from&nbsp;<a href="http://www.debianhelp.co.uk/apachead.htm">http://www.debianhelp.co.uk/apachead.htm</a></tt></dd></dl>
+</td></tr></table><p>
+<table width="100%" cellspacing=0 cellpadding=2 border=0 summary="section">
+<tr bgcolor="#55aa55">
+<td colspan=3 valign=bottom>&nbsp;<br>
+<font color="#ffffff" face="helvetica, arial"><big><strong>Data</strong></big></font></td></tr>
+    
+<tr><td bgcolor="#55aa55"><tt>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</tt></td><td>&nbsp;</td>
+<td width="100%"><strong>DEBUG</strong> = 0<br>
+<strong>DVIPNG</strong> = '/usr/bin/dvipng'<br>
+<strong>DVIPNG_FLAGS</strong> = '-T tight -D 120 -z 9 -bg Transparent -o '<br>
+<strong>IMGDIR</strong> = '/var/www/data/images/htmlatex/'<br>
+<strong>IMGURL</strong> = '/images/htmlatex/'<br>
+<strong>LATEX</strong> = '/usr/bin/latex'<br>
+<strong>PREAMBLE</strong> = '<font color="#c040c0">\n\\</font>documentclass[12pt]{article} <font color="#c040c0">\n\\</font>usepackage{amsm...ge{preview}<font color="#c040c0">\n\\</font>pagestyle{empty} <font color="#c040c0">\n\\</font>begin{document} <font color="#c040c0">\n</font>'<br>
+<strong>TEMPDIR</strong> = '/tmp/htmlatex'<br>
+<strong>TYPES</strong> = {'div': 'det', 'span': 'eq'}<br>
+<strong>__author__</strong> = 'Jay Edwards &lt;jay@meangrape.com&gt;'<br>
+<strong>__copyright__</strong> = 'Copyright (C) 2006, Jay Edwards'<br>
+<strong>__license__</strong> = 'GPLv2'<br>
+<strong>__version__</strong> = 'BETA-1.3'<br>
+<strong>bad_tags</strong> = ['include', 'def', 'command', 'loop', 'repeat', 'open', 'toks', 'output', 'input', 'catcode', 'name', r'\^\^', r'\every', r'\errhelp', r'\errorstopmode', r'\scrollmode', r'\nonstopmode', r'\batchmode', r'\read', r'\write', ...]</td></tr></table><p>
+<table width="100%" cellspacing=0 cellpadding=2 border=0 summary="section">
+<tr bgcolor="#7799ee">
+<td colspan=3 valign=bottom>&nbsp;<br>
+<font color="#ffffff" face="helvetica, arial"><big><strong>Author</strong></big></font></td></tr>
+    
+<tr><td bgcolor="#7799ee"><tt>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</tt></td><td>&nbsp;</td>
+<td width="100%">Jay&nbsp;Edwards&nbsp;&lt;jay@meangrape.com&gt;</td></tr></table>
+</body></html>
